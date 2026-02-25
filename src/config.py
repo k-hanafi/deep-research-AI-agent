@@ -22,7 +22,7 @@ CHECKPOINT_DIR = PROJECT_ROOT / "checkpoints"
 CREDENTIALS_DIR = PROJECT_ROOT / "credentials"
 PROMPTS_DIR = PROJECT_ROOT / "prompts"
 
-# Stage-specific output directories
+# Stage-specific output directories (all under OUTPUT_DIR; contents are gitignored)
 STAGE1_OUTPUT_DIR = OUTPUT_DIR / "stage1"
 STAGE1_TAVILY_DIR = STAGE1_OUTPUT_DIR / "tavily"
 STAGE1_GPT_DIR = STAGE1_OUTPUT_DIR / "gpt"
