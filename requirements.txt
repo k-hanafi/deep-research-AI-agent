@@ -15,6 +15,7 @@ aiofiles>=24.1.0           # Async file I/O
 # ─────────────────────────────────────────────────────────────────────────────
 openai>=1.50.0             # GPT-4o-mini for Stage 1 interpretation
 tavily-python>=0.5.0       # Tavily search API
+perplexityai               # Perplexity Agent API (Stage 2 deep research)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Data Processing
