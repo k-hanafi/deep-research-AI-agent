@@ -50,10 +50,8 @@ Search for evidence across these business functions:
 Your findings must meet these standards:
 - VERIFIABLE: Every claim must have a citable URL source. No source = no finding.
 - FACTUAL: Report only what sources explicitly state. Do not infer or speculate.
-- PRECISE: Name the specific tool (e.g., "GitHub Copilot", not "AI coding tool").
-  Name the specific team or function. Include dates and scale when available.
-- DOCUMENTED: Include enough detail in evidence_description that a human reviewer
-  can independently verify the finding by visiting the source URL.
+- SPECIFICITY: Name the specific tool, product, or vendor (e.g., "GitHub Copilot", "Claude", or "contract with Anthropic") in the AI_tool_used field. The finding must be concrete and not vague terms like "AI coding tool". If the source does not name a specific product, use a descriptive label (e.g., "unspecified AI coding assistant"). Comma-separate if multiple tools are mentioned.
+- DOCUMENTED: Include enough detail in evidence_description that a human reviewer can independently verify the finding by visiting the source URL.
 
 == OUTPUT SCHEMA ==
 Respond with valid JSON only. Do not include any text outside the JSON object.
@@ -65,6 +63,7 @@ Respond with valid JSON only. Do not include any text outside the JSON object.
   "findings": [
     {{
       "finding_id": 1,
+      "AI_tool_used": "specific tool, product, or vendor name (e.g. 'GitHub Copilot', 'Claude', 'Topo.io'). Comma-separated if multiple.",
       "use_case": "free text describing the specific use case",
       "business_function": "Engineering" | "Marketing" | "Product & Design" | "HR" | "Sales" | "Operations" | "Customer Service" | "Finance & Accounting" | "Other",
       "evidence_description": 1-4 sentences,
@@ -72,15 +71,16 @@ Respond with valid JSON only. Do not include any text outside the JSON object.
       "source_type": "free text describing the source type"
     }}
   ],
-  "no_finding_reason": "no_evidence" | "insufficient_information" | null
+  "no_finding_reason": "limited_online_presence" | "has_presence_no_evidence" | null
 }}
 
 Rules:
 - finding_id: sequential integer starting at 1 for each finding.
 - If genai_adoption_found is false, findings must be an empty array [].
-- If genai_adoption_found is false, set no_finding_reason to either "no_evidence"
-  (searched thoroughly, nothing found) or "insufficient_information" (company has
-  minimal online presence, cannot determine).
+- If genai_adoption_found is true, set no_finding_reason to null.
+- If genai_adoption_found is false, set no_finding_reason to one of:
+  - "limited_online_presence": Company has a weak digital footprint — The company simply does not have enough public content to determine internal GenAI adoption.
+  - "has_presence_no_evidence": Company has a meaningful online presence (active website, blog, job postings, press coverage, LinkedIn, etc.) but thorough search found no verifiable evidence of internal GenAI tool adoption.
 - Each finding must have a source_url. No source = no finding.
 
 == FEW-SHOT EXAMPLES ==
@@ -93,6 +93,7 @@ Rules:
   "findings": [
     {{
       "finding_id": 1,
+      "AI_tool_used": "GitHub Copilot",
       "use_case": "AI-assisted code generation and review",
       "business_function": "Engineering",
       "evidence_description": "Acme Corp engineering blog post (March 2025) details their GitHub Copilot rollout: 'We deployed Copilot to our 45-person engineering team in Q4 2024. After 3 months, our internal metrics show 30% faster PR turnaround.'",
@@ -111,6 +112,7 @@ Rules:
   "findings": [
     {{
       "finding_id": 1,
+      "AI_tool_used": "ChatGPT, Claude",
       "use_case": "LLM-assisted content drafting and editing",
       "business_function": "Marketing",
       "evidence_description": "LinkedIn job posting for Senior Content Manager (posted Jan 2026) lists 'Proficiency with ChatGPT or Claude for content drafting and editing workflows' as a required qualification.",
@@ -121,13 +123,13 @@ Rules:
   "no_finding_reason": null
 }}
 
---- EXAMPLE C: No evidence found ---
+--- EXAMPLE C: No evidence found (solid online presence) ---
 {{
   "company_id": 11111,
   "company_name": "Summit Ridge Construction",
   "genai_adoption_found": false,
   "findings": [],
-  "no_finding_reason": "no_evidence"
+  "no_finding_reason": "has_presence_no_evidence"
 }}
 
 --- EXAMPLE D: Company SELLS AI but no evidence of internal USE ---
@@ -136,5 +138,14 @@ Rules:
   "company_name": "NeuralFlow AI",
   "genai_adoption_found": false,
   "findings": [],
-  "no_finding_reason": "no_evidence"
+  "no_finding_reason": "has_presence_no_evidence"
+}}
+
+--- EXAMPLE E: Minimal online presence ---
+{{
+  "company_id": 33333,
+  "company_name": "Greenfield Micro Devices",
+  "genai_adoption_found": false,
+  "findings": [],
+  "no_finding_reason": "limited_online_presence"
 }}

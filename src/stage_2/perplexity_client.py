@@ -60,7 +60,7 @@ class GenAIFinding:
     
     This is the structured output format that maps directly to CSV rows.
     """
-    tool_name: Optional[str] = None  # ChatGPT, Claude, Copilot, etc.
+    AI_tool_used: Optional[str] = None  # ChatGPT, Claude, Copilot, etc.
     use_case: Optional[str] = None   # customer_support, code_generation, etc.
     business_function: Optional[str] = None  # Engineering, Marketing, HR, etc.
     evidence_summary: Optional[str] = None
@@ -114,7 +114,7 @@ class ResearchResult:
             findings = []
             for f in data.get("findings", []):
                 findings.append(GenAIFinding(
-                    tool_name=f.get("tool_name"),
+                    AI_tool_used=f.get("AI_tool_used"),
                     use_case=f.get("use_case"),
                     business_function=f.get("business_function"),
                     evidence_summary=f.get("evidence_summary"),

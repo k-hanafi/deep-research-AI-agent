@@ -42,7 +42,7 @@ CSV_COLUMNS = [
     "finding_id",
     "genai_adoption_found",
     "adoption_confidence",
-    "tool_name",
+    "AI_tool_used",
     "use_case",
     "business_function",
     "evidence_summary",
@@ -77,7 +77,7 @@ class CSVRow:
     finding_id: int = 1
     genai_adoption_found: bool = False
     adoption_confidence: float = 0.0
-    tool_name: Optional[str] = None
+    AI_tool_used: Optional[str] = None
     use_case: Optional[str] = None
     business_function: Optional[str] = None
     evidence_summary: Optional[str] = None
@@ -144,7 +144,7 @@ class CompanyResearchResult:
                     finding_id=i,
                     genai_adoption_found=True,
                     adoption_confidence=finding.confidence,
-                    tool_name=finding.tool_name,
+                    AI_tool_used=finding.AI_tool_used,
                     use_case=finding.use_case,
                     business_function=finding.business_function,
                     evidence_summary=finding.evidence_summary,
@@ -163,7 +163,7 @@ class CompanyResearchResult:
                 finding_id=1,
                 genai_adoption_found=False,
                 adoption_confidence=0.0,
-                tool_name=None,
+                AI_tool_used=None,
                 use_case=None,
                 business_function=None,
                 evidence_summary=None,
@@ -314,7 +314,7 @@ def create_sample_csv(output_path: Optional[Path] = None) -> Path:
                 genai_adoption_found=True,
                 findings=[
                     GenAIFinding(
-                        tool_name="ChatGPT",
+                        AI_tool_used="ChatGPT",
                         use_case="customer_support",
                         business_function="Customer Service",
                         evidence_summary="Uses ChatGPT for automated ticket responses",
@@ -323,7 +323,7 @@ def create_sample_csv(output_path: Optional[Path] = None) -> Path:
                         confidence=0.85,
                     ),
                     GenAIFinding(
-                        tool_name="Copilot",
+                        AI_tool_used="GitHub Copilot",
                         use_case="code_generation",
                         business_function="Engineering",
                         evidence_summary="Engineering team adopted GitHub Copilot",
@@ -349,7 +349,7 @@ def create_sample_csv(output_path: Optional[Path] = None) -> Path:
                 genai_adoption_found=True,
                 findings=[
                     GenAIFinding(
-                        tool_name="ChatGPT",
+                        AI_tool_used="ChatGPT",
                         use_case="content_creation",
                         business_function="Marketing",
                         evidence_summary="Uses ChatGPT for blog content drafts",

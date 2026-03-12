@@ -29,7 +29,7 @@ Produce an **EDA-ready CSV** where each row is one finding of a startup using Ge
 
 - Maximize findings count within a **$4k USD** budget.
 - Academic rigor: every finding must have a verifiable `source_url`.
-- Critical distinction: we want evidence of companies **using** GenAI tools (e.g., Copilot, ChatGPT) for internal operations, **not** companies that sell/build AI products.
+- Critical distinction: we want evidence of companies **using** GenAI tools for internal operations, **not** companies that sell/build AI products.
 
 ## Budget Constraint Analysis
 
