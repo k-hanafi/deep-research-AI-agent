@@ -6,7 +6,6 @@ General development guidelines for AI-assisted coding in this project.
 
 - Use type hints on all function signatures and dataclass fields.
 - Prefer `dataclasses` over plain dicts for structured data.
-- No unnecessary comments — code should be self-documenting. Comments only for non-obvious intent, trade-offs, or constraints.
 - Use `pathlib.Path` over `os.path` for all file operations.
 - Imports: stdlib → third-party → local, separated by blank lines.
 
@@ -31,6 +30,12 @@ General development guidelines for AI-assisted coding in this project.
 - Never let one bad API call crash a batch run. Catch exceptions, record the error, continue.
 - Log errors with enough context to diagnose without re-running (company ID, error type, truncated message).
 
+## API Call Discipline
+
+- **Before every API run**: review code for bugs, null-safety issues, and response-parsing edge cases. API credits are expensive and non-refundable. Catch problems in code review, not in production.
+- Test with a single-call dry run or mock when possible before launching a batch.
+- Treat API fields as potentially null even when SDK types say otherwise — always use defensive access (`or []`, `getattr(..., None)`, etc.).
+
 ## CLI & Scripts
 
 - Use `argparse` for all CLI scripts.
@@ -40,15 +45,7 @@ General development guidelines for AI-assisted coding in this project.
 
 ## Git Conventions
 
-This is a portfolio project read by professors and recruiters. The commit history is a narrative — someone reading it should be able to follow the evolution of the project and understand the reasoning behind each step.
-
-### Commit Message Format
-
-```
-<title line: what value this commit adds>
-
-<body: why this change matters, what decision it reflects>
-```
+The commit history is a narrative — someone reading it should be able to follow the evolution of the project and understand the value added and the reasoning behind each step.
 
 ### Title Line
 
