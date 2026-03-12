@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage 2 Results | GenAI Adoption Research</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #faf9f7;
+            --bg-secondary: #ffffff;
+            --bg-accent: #f5f3f0;
+            --bg-code: #1e1e1e;
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --text-muted: #8a8a8a;
+            --border: #e5e3df;
+            --deep: #3b82f6;
+            --adv: #8b5cf6;
+            --pro: #059669;
+            --fast: #f59e0b;
+            --font-serif: 'Cormorant Garamond', Georgia, serif;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            font-size: 16px;
+        }
+        ::selection { background: #c9a959; color: white; }
+
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 220px;
+            padding: 3rem 2rem;
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .nav-brand {
+            font-family: var(--font-serif);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 3rem;
+        }
+        .nav-section { margin-bottom: 2rem; }
+        .nav-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+        .nav-links { list-style: none; }
+        .nav-links li { margin-bottom: 0.5rem; }
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--text-primary); }
+
+        main { margin-left: 220px; min-height: 100vh; }
+        section {
+            padding: 5rem 4rem;
+            max-width: 1000px;
+            margin: 0 auto;
+            border-bottom: 1px solid var(--border);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        section:last-of-type { border-bottom: none; }
+        section.visible { opacity: 1; transform: translateY(0); }
+        @media print { section { opacity: 1 !important; transform: none !important; } }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 400;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+        }
+        h2 {
+            font-family: var(--font-serif);
+            font-size: clamp(1.8rem, 3vw, 2.2rem);
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+        }
+        h3 {
+            font-family: var(--font-serif);
+            font-size: 1.3rem;
+            font-weight: 500;
+            margin-bottom: 0.75rem;
+        }
+        h4 {
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            color: var(--text-muted);
+        }
+        p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            max-width: 700px;
+            margin-bottom: 1.5rem;
+        }
+        .label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            display: block;
+        }
+        .large-text {
+            font-family: var(--font-serif);
+            font-size: 1.25rem;
+            line-height: 1.8;
+            color: var(--text-secondary);
+        }
+
+        /* Hero */
+        #hero {
+            min-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .hero-stats {
+            display: flex;
+            gap: 4rem;
+            margin-top: 4rem;
+            padding-top: 3rem;
+            border-top: 1px solid var(--border);
+        }
+        .stat-value {
+            font-family: var(--font-serif);
+            font-size: 2.5rem;
+            font-weight: 400;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+        }
+
+        /* Data Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-top: 1.5rem;
+        }
+        .data-table th, .data-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .data-table th {
+            font-weight: 500;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: var(--bg-accent);
+        }
+        .data-table tr.highlight-row { background: #eff6ff; }
+        /* Flowchart */
+        .flowchart {
+            margin: 3rem 0;
+            padding: 3rem 2rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+        .flowchart-title {
+            font-family: var(--font-serif);
+            font-size: 1.1rem;
+            margin-bottom: 2.5rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .flow-node {
+            padding: 1.25rem 2.5rem;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 600;
+            min-width: 320px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .flow-node .subtitle {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 400;
+            opacity: 0.8;
+            margin-top: 0.25rem;
+            font-family: var(--font-mono);
+        }
+        .flow-node.prompt { background: #f8fafc; border: 2px solid #94a3b8; color: #475569; }
+        .flow-node.step { background: #eff6ff; border: 3px solid var(--deep); color: #1e40af; }
+        .flow-node.step-mid { background: #fef3c7; border: 3px solid var(--fast); color: #92400e; }
+        .flow-node.output-node { background: #1e293b; border: 3px solid #1e293b; color: #f8fafc; }
+        .flow-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.75rem 0;
+        }
+        .flow-arrow .shaft {
+            width: 4px;
+            height: 40px;
+            background: linear-gradient(180deg, #94a3b8 0%, #475569 100%);
+            border-radius: 2px;
+        }
+        .flow-arrow .head {
+            width: 0; height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 14px solid #475569;
+        }
+        .flow-arrow .arrow-label {
+            margin-top: 0.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 0.3rem 0.75rem;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+        }
+        /* Summary Grid */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        .summary-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .summary-card .value {
+            font-family: var(--font-serif);
+            font-size: 2rem;
+            font-weight: 400;
+            margin-bottom: 0.25rem;
+        }
+        .summary-card .desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .summary-card.highlight { border-color: var(--deep); background: #eff6ff; }
+        .summary-card.warn { border-color: var(--fast); background: #fffbeb; }
+
+        /* Side-by-side cards */
+        .card-pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        .result-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            border-top: 4px solid;
+        }
+        .result-card.run-a { border-top-color: var(--pro); }
+        .result-card.run-b { border-top-color: var(--fast); }
+        .result-card h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+        .result-card .card-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            display: block;
+        }
+        .card-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+        .card-stat:last-child { border-bottom: none; }
+        .card-stat .card-val {
+            font-family: var(--font-mono);
+            font-weight: 500;
+        }
+
+        /* Bar chart */
+        .chart-container {
+            margin: 2rem 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+        }
+        .chart-title {
+            font-family: var(--font-serif);
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+        }
+        .bar-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            gap: 1rem;
+        }
+        .bar-label {
+            width: 220px;
+            font-size: 0.8rem;
+            text-align: right;
+            flex-shrink: 0;
+            color: var(--text-secondary);
+        }
+        .bar-track {
+            flex: 1;
+            height: 32px;
+            background: var(--bg-accent);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: white;
+            min-width: fit-content;
+            transition: width 1.5s ease;
+        }
+        .bar-fill.cost-low { background: #059669; }
+        .bar-fill.cost-med { background: #f59e0b; }
+        .bar-fill.cost-high { background: #ef4444; }
+        .bar-value {
+            width: 120px;
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        /* Insight boxes */
+        .insight-box {
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+        }
+        .insight-box h4 { color: #991b1b; margin-bottom: 0.75rem; text-transform: none; letter-spacing: 0; font-size: 0.95rem; }
+        .insight-box p { font-size: 0.95rem; margin-bottom: 0.5rem; }
+        .insight-box p:last-child { margin-bottom: 0; }
+
+        .decision-box {
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: #f0f9ff;
+            border: 1px solid #93c5fd;
+            border-radius: 8px;
+        }
+        .decision-box h4 { color: #1e40af; margin-bottom: 0.75rem; text-transform: none; letter-spacing: 0; font-size: 0.95rem; }
+        .decision-box p { font-size: 0.95rem; margin-bottom: 0.5rem; }
+        .decision-box p:last-child { margin-bottom: 0; }
+
+        /* Code block / terminal */
+        .code-block {
+            background: var(--bg-code);
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            overflow: hidden;
+        }
+        .code-header {
+            padding: 0.75rem 1rem;
+            background: #2d2d2d;
+            border-bottom: 1px solid #3d3d3d;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+        }
+        pre {
+            padding: 1.25rem;
+            overflow-x: auto;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            line-height: 1.6;
+            color: #d4d4d4;
+            margin: 0;
+        }
+        .code-comment { color: #6a9955; }
+        .code-keyword { color: #569cd6; }
+        .code-string { color: #ce9178; }
+        .code-number { color: #b5cea8; }
+        .code-flag { color: #9cdcfe; }
+
+        /* Schema display */
+        .schema-block {
+            background: var(--bg-accent);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            overflow: hidden;
+        }
+        .schema-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.8rem;
+            font-weight: 500;
+            background: var(--bg-secondary);
+        }
+        .schema-content {
+            padding: 1.25rem;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            color: var(--text-secondary);
+        }
+
+        /* Two-pass flow */
+        .pass-flow {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 1rem;
+            align-items: center;
+            margin: 2rem 0;
+        }
+        .pass-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .pass-box.pass1 { border-top: 4px solid var(--deep); }
+        .pass-box.pass2 { border-top: 4px solid var(--adv); }
+        .pass-box.skip { border-top: 4px solid #94a3b8; opacity: 0.6; }
+        .pass-arrow {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+        }
+        .pass-box h3 { margin-bottom: 0.25rem; }
+        .pass-box p { font-size: 0.85rem; margin-bottom: 0; max-width: none; }
+
+        /* Validation cards */
+        .option-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        .option-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+        }
+        .option-card h3 { margin-bottom: 0.5rem; }
+        .option-card .tag {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        .tag-auto { background: #d1fae5; color: #065f46; }
+        .tag-manual { background: #dbeafe; color: #1e40af; }
+        .option-card ul {
+            list-style: none;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        .option-card ul li {
+            padding: 0.4rem 0;
+            padding-left: 1.2rem;
+            position: relative;
+        }
+        .option-card ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.75rem;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+        .pro { color: #059669; }
+        .con { color: #dc2626; }
+
+        /* Footer */
+        footer {
+            padding: 4rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        footer p { max-width: none; margin: 0 auto 0.5rem; }
+
+        /* Responsive */
+        @media (max-width: 1100px) {
+            nav { display: none; }
+            main { margin-left: 0; }
+            section { padding: 3rem 2rem; }
+            .hero-stats { flex-wrap: wrap; gap: 2rem; }
+            .summary-grid { grid-template-columns: repeat(2, 1fr); }
+            .card-pair, .option-cards { grid-template-columns: 1fr; }
+            .bar-label { width: 140px; font-size: 0.75rem; }
+            .pass-flow { grid-template-columns: 1fr; }
+            .pass-arrow { transform: rotate(90deg); text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">UBC Sauder</div>
+        <div class="nav-section">
+            <div class="nav-label">Sections</div>
+            <ul class="nav-links">
+                <li><a href="#hero">Overview</a></li>
+                <li><a href="#api">Agent API</a></li>
+                <li><a href="#results">Test Results</a></li>
+                <li><a href="#methodology">Scaling Plan</a></li>
+                <li><a href="#next">Next Steps</a></li>
+            </ul>
+        </div>
+        <div class="nav-section" style="margin-top: auto;">
+            <div class="nav-label">Advisor</div>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">Prof. Jan Bena</p>
+        </div>
+    </nav>
+
+    <main>
+        <!-- ============================================================ -->
+        <!-- HERO                                                         -->
+        <!-- ============================================================ -->
+        <section id="hero">
+            <span class="label">Stage 2 &mdash; March 2026</span>
+            <h1>Deep Research Agent<br>Test Results &amp; Scaling Plan</h1>
+            <p class="large-text">
+                We tested the Perplexity Agent API on ~490 startups from the Stage&nbsp;1 dataset to measure hit rate and cost. This deck presents the API mechanics, results, and a proposed methodology for scaling to the full 9,420 priority&nbsp;4&ndash;5 companies.
+            </p>
+            <div class="hero-stats">
+                <div class="stat">
+                    <div class="stat-value">9,420</div>
+                    <div class="stat-label">Target Companies</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">~490</div>
+                    <div class="stat-label">Processed So Far</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">20&ndash;23%</div>
+                    <div class="stat-label">Hit Rate</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">$0.16&ndash;0.50</div>
+                    <div class="stat-label">Cost / Company</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- HOW THE AGENT API WORKS                                      -->
+        <!-- ============================================================ -->
+        <section id="api">
+            <span class="label">How It Works</span>
+            <h2>Perplexity Agent API</h2>
+
+            <h3 style="margin-top: 2.5rem;">API Parameters and how they drive cost</h3>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 160px;">Parameter</th>
+                        <th style="width: 160px;">Current Value</th>
+                        <th>Description</th>
+                        <th style="width: 200px;">Tunability</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-size: 0.85rem;">model</td>
+                        <td><strong>GPT-5.2</strong></td>
+                        <td>The underlying LLM that performs reasoning and generates the output.</td>
+                        <td>Can switch to <strong>Claude Opus 4.6</strong> for potentially higher-quality reasoning (more expensive)</td>
+                    </tr>
+                    <tr class="highlight-row">
+                        <td style="font-family: var(--font-mono); font-size: 0.85rem;">max_steps</td>
+                        <td><strong>10</strong></td>
+                        <td>Maximum number of search&ndash;reason iterations the model can perform. Each step adds all prior search results to the context window, so input tokens grow with each step. <strong>This is the primary cost driver.</strong></td>
+                        <td>Range: <strong>7&ndash;15</strong>. Lower = cheaper but may miss evidence. Higher = more thorough but significantly more expensive.</td>
+                    </tr>
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-size: 0.85rem;">max_tokens</td>
+                        <td><strong>10,000</strong></td>
+                        <td>Maximum tokens in the model&rsquo;s output response (our JSON findings).</td>
+                        <td>Range: <strong>3K&ndash;15K</strong>. 10K is sufficient for our structured JSON output. Increasing wastes budget; decreasing risks truncation for companies with many findings.</td>
+                    </tr>
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-size: 0.85rem;">max_tokens_per_page</td>
+                        <td><strong>4,000</strong></td>
+                        <td>How many tokens the model reads from each web page it fetches. Controls the depth of each individual source.</td>
+                        <td><strong>Keep at 4K.</strong> Lower values cause the model to miss context on longer pages; higher values inflate cost per step without clear quality gains.</td>
+                    </tr>
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-size: 0.85rem;">tools</td>
+                        <td><strong>web_search, fetch_url</strong></td>
+                        <td>The tools the model can invoke during reasoning. <code style="font-family: var(--font-mono); font-size: 0.8rem;">web_search</code> queries the web; <code style="font-family: var(--font-mono); font-size: 0.8rem;">fetch_url</code> reads full page content from a URL.</td>
+                        <td>Fixed for deep-research. Both are required for thorough evidence gathering.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="insight-box">
+                <h4>Why max_steps dominates cost</h4>
+                <p>Each reasoning step adds all previous search results to the context window. By step 7&ndash;10, the model is processing hundreds of thousands of accumulated input tokens. The model decides how many steps to take (up to the cap) &mdash; there is no way to predict in advance how many steps a given company will require.</p>
+                <p>In our tests, average input tokens ranged from <strong>58K</strong> (Run&nbsp;1) to <strong>247K</strong> (Run&nbsp;2) &mdash; a 4&times; difference driven entirely by the model taking more reasoning steps on the server side.</p>
+            </div>
+
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- TEST RESULTS                                                 -->
+        <!-- ============================================================ -->
+        <section id="results">
+            <span class="label">Empirical Data</span>
+            <h2>Test Results</h2>
+            <p>
+                Two major test runs were conducted on the same pipeline with slightly different prompt schemas. Both used the <strong>deep-research</strong> preset with default parameters.
+            </p>
+
+            <div class="card-pair">
+
+                <div class="result-card run-a">
+                    <span class="card-label">Run 1 &mdash; March 7&ndash;9</span>
+                    <h3>Baseline Schema</h3>
+                    <div class="card-stat">
+                        <span>Companies processed</span>
+                        <span class="card-val">313 successful / 404 total</span>
+                    </div>
+                    <div class="card-stat">
+                        <span>Average cost</span>
+                        <span class="card-val" style="color: #059669;">$0.16</span>
+                    </div>
+                    <div class="card-stat">
+                        <span>Hit rate</span>
+                        <span class="card-val">19.8% (62 / 313)</span>
+                    </div>
+                    <div class="card-stat">
+                        <span>Total findings</span>
+                        <span class="card-val">94</span>
+                    </div>
+                    <div class="card-stat">
+                        <span>Avg input tokens</span>
+                        <span class="card-val">58,675</span>
+                    </div>
+                </div>
+
+                <div class="result-card run-b">
+                    <span class="card-label">Run 2 &mdash; March 9</span>
+                    <h3>V2 Schema (with analysis field)</h3>
+                    <div class="card-stat">
+                        <span>Companies processed</span>
+                        <span class="card-val">176 successful / 176 total</span>
+                    </div>
+                    <div class="card-stat">
+                        <span>Average cost</span>
+                        <span class="card-val" style="color: #dc2626;">$0.50</span>
+                    </div>
+                    <div class="card-stat">
+                        <span>Hit rate</span>
+                        <span class="card-val">22.7% (40 / 176)</span>
+                    </div>
+                    <div class="card-stat">
+                        <span>Total findings</span>
+                        <span class="card-val">66</span>
+                    </div>
+                    <div class="card-stat">
+                        <span>Avg input tokens</span>
+                        <span class="card-val">247,100</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <h3 style="margin-top: 3rem;">Cost Volatility Across Sub-Runs</h3>
+            <p>Breaking down Run 2 by sub-run reveals significant cost fluctuation &mdash; even within the same day, using the same code and prompt.</p>
+
+            <div class="chart-container">
+                <div class="chart-title">Average Cost per API Call by Sub-Run</div>
+
+                <div class="bar-row">
+                    <div class="bar-label">run_132542 (20 co.)</div>
+                    <div class="bar-track">
+                        <div class="bar-fill cost-low" style="width: 20%;">$0.14</div>
+                    </div>
+                    <div class="bar-value">Cheap</div>
+                </div>
+                <div class="bar-row">
+                    <div class="bar-label">run_134546 (20 co.)</div>
+                    <div class="bar-track">
+                        <div class="bar-fill cost-med" style="width: 67%;">$0.47</div>
+                    </div>
+                    <div class="bar-value">3.4&times; jump</div>
+                </div>
+                <div class="bar-row">
+                    <div class="bar-label">run_142954 (21 co.)</div>
+                    <div class="bar-track">
+                        <div class="bar-fill cost-high" style="width: 96%;">$0.67</div>
+                    </div>
+                    <div class="bar-value">Most expensive</div>
+                </div>
+                <div class="bar-row">
+                    <div class="bar-label">run_143609 (115 co.)</div>
+                    <div class="bar-track">
+                        <div class="bar-fill cost-med" style="width: 76%;">$0.53</div>
+                    </div>
+                    <div class="bar-value">Settled here</div>
+                </div>
+
+            </div>
+
+            <div class="insight-box">
+                <h4>Key finding: cost is driven by Perplexity's server-side behavior</h4>
+                <p><strong>A/B test on identical companies:</strong> We re-ran the exact same 19 companies from Run 1 using the exact same prompt and parameters. The average cost was $0.60 instead of the original $0.16 &mdash; a <strong>3.7&times; increase</strong>.</p>
+                <p>Input tokens jumped from ~58K to ~290K average, while search result counts remained the same. This confirms the model is performing more internal reasoning steps per call due to a server-side model update, not due to our code or prompt changes.</p>
+            </div>
+
+            <div class="decision-box">
+                <h4>Implication for scaling</h4>
+                <p>We cannot rely on a fixed cost estimate. The cost per company will fluctuate between $0.15 and $0.70 depending on Perplexity's model behavior on any given day. Our scaling methodology must account for this unpredictability.</p>
+            </div>
+
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- PROPOSED SCALING METHODOLOGY                                 -->
+        <!-- ============================================================ -->
+        <section id="methodology">
+            <span class="label">Proposed Approach</span>
+            <h2>Batch-Controlled Scaling</h2>
+            <p>
+                Rather than committing to a single large run, we process companies in monitored batches of 100. After each batch, we review the average cost and hit rate, then decide whether to continue, adjust parameters, or pause.
+            </p>
+
+            <h3 style="margin-top: 2.5rem;">CLI Control Levers</h3>
+            <p>The production script exposes several parameters that control cost and throughput:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                    <span>production_agent_runner.py</span>
+                </div>
+                <pre><span class="code-comment"># Run 100 companies per priority, cap budget at $200</span>
+python -m src.stage_2.production_agent_runner \
+    <span class="code-flag">--sample-size</span> <span class="code-number">100</span> \
+    <span class="code-flag">--priorities</span> <span class="code-number">5 4</span> \
+    <span class="code-flag">--concurrency</span> <span class="code-number">10</span> \
+    <span class="code-flag">--budget-cap</span> <span class="code-number">200</span> \
+    <span class="code-flag">--max-steps</span> <span class="code-number">7</span></pre>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Flag</th>
+                        <th>Purpose</th>
+                        <th>Impact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-size: 0.85rem;">--budget-cap</td>
+                        <td>Auto-stop when cumulative spend reaches this threshold</td>
+                        <td>Prevents runaway cost</td>
+                    </tr>
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-size: 0.85rem;">--max-steps</td>
+                        <td>Override the preset's reasoning depth (default: 10)</td>
+                        <td>Fewer steps = lower cost, possibly lower hit rate</td>
+                    </tr>
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-size: 0.85rem;">--sample-size</td>
+                        <td>How many companies per priority level</td>
+                        <td>Controls batch size</td>
+                    </tr>
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-size: 0.85rem;">--concurrency</td>
+                        <td>Parallel API calls (Tier&nbsp;1: 3&nbsp;QPS, 150&nbsp;RPM)</td>
+                        <td>Faster execution, same cost</td>
+                    </tr>
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-size: 0.85rem;">Ctrl+C</td>
+                        <td>Pause (1st press), Stop (2nd press), Force exit (3rd press)</td>
+                        <td>Manual intervention at any time</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top: 3rem;">Execution Workflow</h3>
+
+            <div class="flowchart" style="padding: 2rem;">
+                <div class="flow-container">
+                    <div class="flow-node prompt" style="min-width: 400px;">
+                        1. Run batch of 100 companies
+                        <span class="subtitle">Results stream to CSV after each API call</span>
+                    </div>
+                    <div class="flow-arrow">
+                        <div class="shaft" style="height:30px;"></div>
+                        <div class="head"></div>
+                    </div>
+                    <div class="flow-node step" style="min-width: 400px;">
+                        2. Review avg cost &amp; hit rate
+                        <span class="subtitle">Professor decides: acceptable cost threshold?</span>
+                    </div>
+                    <div class="flow-arrow">
+                        <div class="shaft" style="height:30px;"></div>
+                        <div class="head"></div>
+                    </div>
+                    <div class="flow-node step-mid" style="min-width: 400px;">
+                        3. Adjust parameters if needed
+                        <span class="subtitle">Lower --max-steps to reduce cost, or increase for quality</span>
+                    </div>
+                    <div class="flow-arrow">
+                        <div class="shaft" style="height:30px;"></div>
+                        <div class="head"></div>
+                    </div>
+                    <div class="flow-node output-node" style="min-width: 400px;">
+                        4. Resume &mdash; picks up where it left off
+                        <span class="subtitle">Master JSONL tracks all processed companies</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-grid" style="margin-top: 2rem;">
+                <div class="summary-card">
+                    <div class="value">$0.25</div>
+                    <div class="desc">Optimistic est. / co.</div>
+                </div>
+                <div class="summary-card warn">
+                    <div class="value">$0.60</div>
+                    <div class="desc">Conservative est. / co.</div>
+                </div>
+                <div class="summary-card">
+                    <div class="value">$2,800&ndash;4,700</div>
+                    <div class="desc">Projected total (9,420)</div>
+                </div>
+                <div class="summary-card highlight">
+                    <div class="value">~25%</div>
+                    <div class="desc">Expected hit rate</div>
+                </div>
+            </div>
+ 
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- NEXT STEPS                                                   -->
+        <!-- ============================================================ -->
+        <section id="next">
+            <span class="label">Looking Ahead</span>
+            <h2>Next Steps</h2>
+
+            <!-- 5a: Pass 2 schema -->
+            <h3 style="margin-top: 2rem;">A. Two-Pass Strategy for Higher Yield</h3>
+            <p>
+                Pass 1 classifies every "no finding" result into one of two categories via the <code style="font-family: var(--font-mono); font-size: 0.9rem;">no_finding_reason</code> enum. This classification enables an intelligent second pass.
+            </p>
+
+            <div class="schema-block">
+                <div class="schema-header">no_finding_reason enum</div>
+                <div class="schema-content"><strong>"limited_online_presence"</strong>
+    Company has a weak digital footprint. Even a more powerful
+    model will not find what does not exist online.
+    <span style="color: #dc2626;">&rarr; Skip in Pass 2 (save money)</span>
+
+<strong>"has_presence_no_evidence"</strong>
+    Company has an active website, blog, job postings, press
+    coverage, etc. but no verifiable GenAI adoption evidence
+    was found by the deep-research preset.
+    <span style="color: #059669;">&rarr; Re-process in Pass 2 with more powerful model</span></div>
+            </div>
+
+            <p>From our test data, ~90% of "no finding" companies are classified as <strong>has_presence_no_evidence</strong>. Pass 2 would re-process only these companies with the more powerful (and more expensive) <strong>advanced-deep-research</strong> preset (Claude Opus 4.6).</p>
+
+            <div class="decision-box">
+                <h4>Optional enhancement: no_finding_analysis</h4>
+                <p>We can add a free-text field where the agent writes 3&ndash;5 sentences explaining <em>why</em> no evidence was found. This helps us understand if the company is genuinely non-adopting vs. just hard to research, and informs whether Pass 2 is worthwhile. However, this field increases cost per call. We can enable it selectively.</p>
+            </div>
+
+            <!-- 5b: Stage 3 Validation -->
+            <h3 style="margin-top: 3rem;">B. Stage 3: Validation</h3>
+            <p>
+                All findings come with source URLs, but LLMs can hallucinate citations. Before including findings in the research paper, we need a validation layer. Two options:
+            </p>
+
+            <div class="option-cards">
+
+                <div class="option-card">
+                    <span class="tag tag-auto">Automated</span>
+                    <h3>Option 1: LLM-as-a-Judge</h3>
+                    <ul>
+                        <li>A separate LLM visits each source URL and checks if the finding is supported by the page content</li>
+                        <li>Estimated cost: ~$20 for all findings</li>
+                    </ul>
+                </div>
+
+                <div class="option-card">
+                    <span class="tag tag-manual">Human Review</span>
+                    <h3>Option 2: Validation GUI</h3>
+                    <ul>
+                        <li>Web interface showing finding + source URL side by side. Reviewer clicks Confirm or Flag.</li>
+                        <li>Estimated time: 30&ndash;60 seconds per finding x ~2,000 findings</li>
+                        <li> Or can validate a sample (e.g. 10%) and extrapolate precision</li>
+
+                    </ul>
+                </div>
+
+            </div>
+
+
+        </section>
+
+        <footer>
+
+        </footer>
+    </main>
+
+    <script>
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) entry.target.classList.add('visible');
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+        document.querySelectorAll('section').forEach(s => observer.observe(s));
+        document.getElementById('hero').classList.add('visible');
+        setTimeout(() => {
+            document.querySelectorAll('section:not(.visible)').forEach(s => s.classList.add('visible'));
+        }, 1500);
+    </script>
+</body>
+</html>
