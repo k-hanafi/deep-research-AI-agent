@@ -32,11 +32,11 @@ from pathlib import Path
 from typing import Optional
 
 from perplexity import Perplexity
-from perplexity.types.output_item import SearchResultsOutputItem
+from perplexity.types.output_item import MessageOutputItem, SearchResultsOutputItem
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from src.config import STAGE2_OUTPUT_DIR, PROMPTS_DIR, LOG_DIR, APIKeys
+from src.config import STAGE2_OUTPUT_DIR, STAGE2_TEST_RUNS_DIR, PROMPTS_DIR, LOG_DIR, APIKeys
 
 
 DATASET_PATH = STAGE2_OUTPUT_DIR / "stage2_input_dataset.jsonl"
@@ -44,8 +44,11 @@ PROMPT_FILE = PROMPTS_DIR / "stage_2_perplexity_prompt.txt"
 
 DEFAULT_SEED = 2026
 DEFAULT_TIMEOUT = 300.0
-RPM_LIMIT = 5
-INTER_CALL_DELAY = 60.0 / RPM_LIMIT  # 12s between calls to stay under 5 RPM
+RPM_LIMIT = 50          # Agent API Tier 0: 50 req/min, 1 QPS
+INTER_CALL_DELAY = 1.0  # 1s between calls; each call takes 30-60s so RPM is never a concern
+
+# Presets where response_format causes 500 errors; rely on prompt for JSON.
+_SCHEMA_INCOMPATIBLE_PRESETS = {"advanced-deep-research"}
 
 logger = logging.getLogger("run_preset_test")
 
@@ -69,6 +72,8 @@ class Company:
 class TestResult:
     rcid: int
     company_name: str
+    homepage_url: Optional[str]
+    short_description: Optional[str]
     preset: str
     priority: int
     genai_adoption_found: Optional[bool] = None
@@ -82,8 +87,10 @@ class TestResult:
     search_results_count: int = 0
     response_id: Optional[str] = None
     model_used: Optional[str] = None
+    response_status: Optional[str] = None
     citations: list[str] = field(default_factory=list)
     error: Optional[str] = None
+    raw_content_preview: Optional[str] = None
     duration_seconds: float = 0.0
     timestamp: str = ""
 
@@ -109,6 +116,7 @@ RESPONSE_SCHEMA = {
                         "type": "object",
                         "properties": {
                             "finding_id": {"type": "integer"},
+                            "AI_tool_used": {"type": "string"},
                             "use_case": {"type": "string"},
                             "business_function": {"type": "string"},
                             "evidence_description": {"type": "string"},
@@ -116,8 +124,9 @@ RESPONSE_SCHEMA = {
                             "source_type": {"type": "string"},
                         },
                         "required": [
-                            "finding_id", "use_case", "business_function",
-                            "evidence_description", "source_url", "source_type",
+                            "finding_id", "AI_tool_used", "use_case",
+                            "business_function", "evidence_description",
+                            "source_url", "source_type",
                         ],
                         "additionalProperties": False,
                     },
@@ -177,7 +186,11 @@ def sample_companies(
 
 
 def load_completed_rcids(output_path: Path, preset: str) -> set[int]:
-    """Load rcids already processed for a given preset from an existing output file."""
+    """Load rcids successfully processed for a given preset.
+
+    Only counts records where error is null/absent — failed calls are
+    eligible for retry on resume.
+    """
     completed: set[int] = set()
     if not output_path.exists():
         return completed
@@ -188,7 +201,7 @@ def load_completed_rcids(output_path: Path, preset: str) -> set[int]:
                 continue
             try:
                 rec = json.loads(line)
-                if rec.get("preset") == preset:
+                if rec.get("preset") == preset and not rec.get("error"):
                     completed.add(rec["rcid"])
             except (json.JSONDecodeError, KeyError):
                 continue
@@ -222,6 +235,59 @@ def build_prompt(company: Company) -> str:
 # SINGLE COMPANY RESEARCH CALL (synchronous — SDK handles HTTP)
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _extract_text_fallback(output: list) -> str:
+    """Try to extract text content when output_text is empty.
+
+    Some model+preset combos may structure output differently. This walks
+    all MessageOutputItem content parts to find any text, regardless of
+    the content part type label.
+    """
+    texts: list[str] = []
+    for item in output:
+        if isinstance(item, MessageOutputItem):
+            for part in (item.content or []):
+                text = getattr(part, "text", None)
+                if text:
+                    texts.append(text)
+    return "".join(texts)
+
+
+def _extract_json_from_text(text: str) -> str:
+    """Find the outermost JSON object in text that may contain prose.
+
+    Models without response_format enforcement may wrap JSON in markdown
+    fences or surrounding commentary. This extracts the first complete
+    { … } block using brace-depth counting so we don't need regex for
+    nested objects.
+    """
+    start = text.find("{")
+    if start == -1:
+        return text
+    depth = 0
+    in_string = False
+    escape = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if escape:
+            escape = False
+            continue
+        if ch == "\\":
+            escape = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+    return text[start:]
+
+
 def research_company(
     client: Perplexity,
     company: Company,
@@ -231,28 +297,36 @@ def research_company(
     result = TestResult(
         rcid=company.rcid,
         company_name=company.name,
+        homepage_url=company.homepage_url,
+        short_description=company.short_description,
         preset=preset,
         priority=company.research_priority_score,
         timestamp=datetime.utcnow().isoformat() + "Z",
     )
 
     try:
-        response = client.responses.create(
+        create_kwargs: dict = dict(
             preset=preset,
             input=build_prompt(company),
-            response_format=RESPONSE_SCHEMA,
             timeout=DEFAULT_TIMEOUT,
         )
+        if preset in _SCHEMA_INCOMPATIBLE_PRESETS:
+            create_kwargs["instructions"] = (
+                "Your final answer must be ONLY a valid JSON object matching "
+                "the schema described in the user prompt. Do not include any "
+                "text, markdown fences, or commentary outside the JSON object."
+            )
+        else:
+            create_kwargs["response_format"] = RESPONSE_SCHEMA
 
+        response = client.responses.create(**create_kwargs)
+
+        # ── Always capture metadata, usage, and citations first ──
+        # These must be recorded even when content parsing fails,
+        # so we can track costs on wasted API calls.
         result.response_id = response.id
         result.model_used = response.model
-
-        parsed = json.loads(response.output_text)
-
-        result.genai_adoption_found = parsed.get("genai_adoption_found", False)
-        result.findings = parsed.get("findings", [])
-        result.findings_count = len(result.findings)
-        result.no_finding_reason = parsed.get("no_finding_reason")
+        result.response_status = response.status
 
         if response.usage:
             result.input_tokens = response.usage.input_tokens
@@ -261,16 +335,62 @@ def research_company(
             if response.usage.cost:
                 result.cost_usd = response.usage.cost.total_cost
 
-        search_result_count = 0
         for item in response.output:
             if isinstance(item, SearchResultsOutputItem):
-                search_result_count += len(item.results)
-                for sr in item.results:
+                for sr in (item.results or []):
                     result.citations.append(sr.url)
-        result.search_results_count = search_result_count
+        result.search_results_count = len(result.citations)
+
+        # ── Check for API-level failure ──
+        if response.status == "failed":
+            err = response.error
+            error_detail = f"{err.type}: {err.message}" if err else "unknown"
+            raise ValueError(f"Response failed: {error_detail}")
+
+        # ── Extract text content ──
+        content = response.output_text
+        if not content:
+            content = _extract_text_fallback(response.output)
+            if content:
+                logger.debug(
+                    "output_text empty; fallback extracted %d chars", len(content),
+                )
+
+        content = (content or "").strip()
+
+        if not content:
+            output_types = [type(item).__name__ for item in response.output]
+            logger.warning(
+                "Empty response for %s (model=%s, status=%s, types=%s)",
+                company.name, response.model, response.status, output_types,
+            )
+            raise ValueError(
+                f"Empty response content (model={response.model}, "
+                f"status={response.status}, output_types={output_types})"
+            )
+
+        result.raw_content_preview = content[:500]
+
+        # ── Parse JSON ──
+        # Presets without response_format may wrap JSON in prose/fences.
+        json_text = (
+            _extract_json_from_text(content)
+            if preset in _SCHEMA_INCOMPATIBLE_PRESETS
+            else content
+        )
+        parsed = json.loads(json_text)
+
+        result.genai_adoption_found = parsed.get("genai_adoption_found", False)
+        result.findings = parsed.get("findings") or []
+        result.findings_count = len(result.findings)
+        result.no_finding_reason = parsed.get("no_finding_reason")
 
     except json.JSONDecodeError as e:
         result.error = f"JSON parse error: {e}"
+        logger.debug(
+            "Content that failed JSON parsing (%d chars): %.200s",
+            len(content), content,
+        )
     except Exception as e:
         result.error = f"{type(e).__name__}: {str(e)[:500]}"
 
@@ -380,7 +500,7 @@ def run_batch(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# OUTPUT PATH NAMING
+# RUN DIRECTORY — one folder per invocation, all outputs co-located
 # ─────────────────────────────────────────────────────────────────────────────
 
 PRESET_SHORT = {
@@ -389,11 +509,33 @@ PRESET_SHORT = {
 }
 
 
-def build_output_path(phase: str, preset: str, priority: int) -> Path:
-    date_str = datetime.now().strftime("%Y%m%d")
+def create_run_dir(phase: str) -> Path:
+    """Create a timestamped run directory and update the `latest` symlink.
+
+    Layout:
+        outputs/stage2/test_runs/
+        ├── pilot_20260227_152049/     <- this run
+        │   ├── deep_p5.jsonl
+        │   ├── adv_p4.jsonl
+        │   ├── results.csv
+        │   └── run.log
+        └── latest -> pilot_20260227_152049
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_name = f"{phase}_{timestamp}"
+    run_dir = STAGE2_TEST_RUNS_DIR / run_name
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    latest = STAGE2_TEST_RUNS_DIR / "latest"
+    latest.unlink(missing_ok=True)
+    latest.symlink_to(run_name)
+
+    return run_dir
+
+
+def build_output_path(run_dir: Path, preset: str, priority: str | int) -> Path:
     short = PRESET_SHORT.get(preset, preset.replace("-", ""))
-    filename = f"{phase}_{short}_p{priority}_{date_str}.jsonl"
-    return STAGE2_OUTPUT_DIR / filename
+    return run_dir / f"{short}_p{priority}.jsonl"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -407,11 +549,11 @@ CSV_COLUMNS = [
     # Research result
     "preset", "genai_adoption_found", "no_finding_reason", "finding_count",
     # Finding detail
-    "finding_id", "use_case", "business_function", "evidence_description",
-    "source_url", "source_type",
+    "finding_id", "AI_tool_used", "use_case", "business_function",
+    "evidence_description", "source_url", "source_type",
     # Cost and diagnostics
     "cost_usd", "input_tokens", "output_tokens", "total_tokens",
-    "search_results_count", "response_id", "error",
+    "search_results_count", "response_id", "response_status", "error",
 ]
 
 
@@ -444,8 +586,8 @@ def export_csv(jsonl_paths: list[Path], csv_path: Path) -> int:
                     base = {
                         "company_id": rec.get("rcid"),
                         "company_name": rec.get("company_name"),
-                        "homepage_url": "",
-                        "short_description": "",
+                        "homepage_url": rec.get("homepage_url") or "",
+                        "short_description": rec.get("short_description") or "",
                         "research_priority_score": rec.get("priority"),
                         "preset": rec.get("preset"),
                         "genai_adoption_found": rec.get("genai_adoption_found"),
@@ -457,13 +599,15 @@ def export_csv(jsonl_paths: list[Path], csv_path: Path) -> int:
                         "total_tokens": rec.get("total_tokens") or "",
                         "search_results_count": rec.get("search_results_count", 0),
                         "response_id": rec.get("response_id") or "",
+                        "response_status": rec.get("response_status") or "",
                         "error": rec.get("error") or "",
                     }
 
                     findings = rec.get("findings", [])
                     if not findings:
-                        row = {**base, "finding_id": "", "use_case": "",
-                               "business_function": "", "evidence_description": "",
+                        row = {**base, "finding_id": "", "AI_tool_used": "",
+                               "use_case": "", "business_function": "",
+                               "evidence_description": "",
                                "source_url": "", "source_type": ""}
                         writer.writerow(row)
                         rows_written += 1
@@ -472,6 +616,7 @@ def export_csv(jsonl_paths: list[Path], csv_path: Path) -> int:
                             row = {
                                 **base,
                                 "finding_id": finding.get("finding_id"),
+                                "AI_tool_used": finding.get("AI_tool_used", ""),
                                 "use_case": finding.get("use_case", ""),
                                 "business_function": finding.get("business_function", ""),
                                 "evidence_description": finding.get("evidence_description", ""),
@@ -495,6 +640,7 @@ def print_summary(all_results: dict[str, list[TestResult]]) -> None:
 
     grand_cost = 0.0
     grand_calls = 0
+    grand_errors = 0
 
     for label, results in all_results.items():
         if not results:
@@ -502,6 +648,7 @@ def print_summary(all_results: dict[str, list[TestResult]]) -> None:
 
         costs = [r.cost_usd for r in results if r.cost_usd is not None]
         errors = [r for r in results if r.error]
+        grand_errors += len(errors)
         non_error = len(results) - len(errors)
         found = [r for r in results if r.genai_adoption_found]
         total_findings = sum(r.findings_count for r in results)
@@ -535,13 +682,14 @@ def print_summary(all_results: dict[str, list[TestResult]]) -> None:
 
         grand_calls += len(results)
 
-    print(f"\nGrand total: ${grand_cost:.4f} across {grand_calls} API calls")
+    grand_successful = grand_calls - grand_errors
+    print(f"\nGrand total: ${grand_cost:.4f} across {grand_calls} API calls ({grand_errors} errors)")
 
-    if grand_calls and grand_cost > 0:
-        avg_all = grand_cost / grand_calls
+    if grand_successful and grand_cost > 0:
+        avg_all = grand_cost / grand_successful
         budget = 4000.0
         projected = int(budget / avg_all)
-        print(f"Projected capacity at this avg (${avg_all:.4f}/call): ~{projected:,} companies for $4k")
+        print(f"Projected capacity at this avg (${avg_all:.4f}/call, errors excluded): ~{projected:,} companies for $4k")
 
     print("=" * 70)
 
@@ -550,14 +698,14 @@ def print_summary(all_results: dict[str, list[TestResult]]) -> None:
 # LOGGING
 # ─────────────────────────────────────────────────────────────────────────────
 
-def setup_logging(phase: str, verbose: bool = False) -> None:
+def setup_logging(run_dir: Path, verbose: bool = False) -> None:
     level = logging.DEBUG if verbose else logging.INFO
 
     console = logging.StreamHandler(sys.stdout)
     console.setLevel(level)
     console.setFormatter(logging.Formatter("%(asctime)s %(message)s", datefmt="%H:%M:%S"))
 
-    log_file = LOG_DIR / f"preset_test_{phase}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    log_file = run_dir / "run.log"
     fh = logging.FileHandler(log_file)
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
@@ -566,6 +714,7 @@ def setup_logging(phase: str, verbose: bool = False) -> None:
     logger.addHandler(console)
     logger.addHandler(fh)
 
+    logger.info("Run directory: %s", run_dir)
     logger.info("Logging to %s", log_file)
 
 
@@ -588,6 +737,11 @@ Examples:
   python -m src.tests.stage2.run_preset_test \\
       --presets deep-research \\
       --sample-size 100 --priorities 5 --phase statistical
+
+  # Target specific companies by rcid (bypasses sampling)
+  python -m src.tests.stage2.run_preset_test \\
+      --rcids 510536 59639 \\
+      --presets deep-research advanced-deep-research --phase pilot
 """,
     )
     parser.add_argument(
@@ -615,6 +769,10 @@ Examples:
         help=f"Path to input dataset JSONL (default: {DATASET_PATH})",
     )
     parser.add_argument(
+        "--rcids", nargs="+", type=int, default=None,
+        help="Target specific company rcids (bypasses --sample-size/--priorities)",
+    )
+    parser.add_argument(
         "--verbose", action="store_true",
         help="Enable debug logging",
     )
@@ -623,7 +781,9 @@ Examples:
 
 def main() -> None:
     args = parse_args()
-    setup_logging(args.phase, args.verbose)
+
+    run_dir = create_run_dir(args.phase)
+    setup_logging(run_dir, args.verbose)
 
     keys = APIKeys()
     if not keys.perplexity:
@@ -639,22 +799,36 @@ def main() -> None:
     all_results: dict[str, list[TestResult]] = {}
     all_jsonl_paths: list[Path] = []
 
-    for priority in args.priorities:
-        sample = sample_companies(all_companies, priority, args.sample_size, args.seed)
-        logger.info(
-            "Sampled %d companies for priority=%d (seed=%d)",
-            len(sample), priority, args.seed,
-        )
-        if not sample:
-            continue
+    if args.rcids:
+        rcid_set = set(args.rcids)
+        targeted = [c for c in all_companies if c.rcid in rcid_set]
+        missing = rcid_set - {c.rcid for c in targeted}
+        if missing:
+            logger.warning("rcids not found in dataset: %s", missing)
+        if not targeted:
+            logger.error("No matching companies found for --rcids")
+            sys.exit(1)
+        logger.info("Targeted %d companies by rcid", len(targeted))
+        priority_groups = [("targeted", targeted)]
+    else:
+        priority_groups = []
+        for priority in args.priorities:
+            sample = sample_companies(all_companies, priority, args.sample_size, args.seed)
+            logger.info(
+                "Sampled %d companies for priority=%d (seed=%d)",
+                len(sample), priority, args.seed,
+            )
+            if sample:
+                priority_groups.append((str(priority), sample))
 
+    for priority_label, sample in priority_groups:
         for preset in args.presets:
             if shutdown.should_stop:
                 break
 
-            output_path = build_output_path(args.phase, preset, priority)
+            output_path = build_output_path(run_dir, preset, priority_label)
             all_jsonl_paths.append(output_path)
-            label = f"{preset} / priority={priority}"
+            label = f"{preset} / priority={priority_label}"
             logger.info(
                 "\n── %s  (%d companies) → %s",
                 label, len(sample), output_path.name,
@@ -674,14 +848,14 @@ def main() -> None:
 
     print_summary(all_results)
 
-    # Auto-generate CSV from all JSONL outputs
     existing_paths = [p for p in all_jsonl_paths if p.exists()]
     if existing_paths:
-        date_str = datetime.now().strftime("%Y%m%d")
-        csv_path = STAGE2_OUTPUT_DIR / f"{args.phase}_{date_str}_results.csv"
+        csv_path = run_dir / "results.csv"
         rows = export_csv(existing_paths, csv_path)
         logger.info("CSV exported: %d rows → %s", rows, csv_path)
         print(f"\nCSV: {rows} rows written to {csv_path}")
+        print(f"Run directory: {run_dir}")
+        print(f"Latest shortcut: {STAGE2_TEST_RUNS_DIR / 'latest' / 'results.csv'}")
 
     client.close()
 
